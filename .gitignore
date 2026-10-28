@@ -4,3 +4,5 @@ dist/
 .env.*
 !.env.example
 .DS_Store
+srt_suseo_modeling/
+.station-model-build-*/

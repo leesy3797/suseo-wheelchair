@@ -1,58 +1,83 @@
-import React, { useMemo } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { ContactShadows, Line, OrbitControls, Text } from '@react-three/drei';
+import { Line, OrbitControls, Text, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { buildings, geofences, nodes, pillars } from '../simulation.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { BOUNDS, geofences, nodes } from '../simulation.js';
 
 function floorHeight(floor) {
-  return floor === 'B1' ? -1.6 : 1.6;
+  return ({ '1F': 12, B1: 0, B2: -12 })[floor] ?? 0;
 }
 
-function floorOffsetZ(floor) {
-  return floor === 'B1' ? -9 : 9;
+const architecture = [
+  {
+    file: '/models/station-1f.glb',
+    floor: '1F',
+    scale: 0.12,
+    sourceCenter: [111.1236, -73.2111],
+    targetCenter: [0, 0],
+    sourceFloor: 1.196,
+  },
+  {
+    file: '/models/station-b1.glb',
+    floor: 'B1',
+    scale: 0.08,
+    sourceCenter: [128.9716, -72.4975],
+    targetCenter: [0, 0.5],
+    sourceFloor: -3.085,
+  },
+  {
+    file: '/models/station-b2-concourse.glb',
+    floor: 'B2',
+    scale: 0.09,
+    sourceCenter: [38.8114, -47.9208],
+    targetCenter: [-6.7, 0.8],
+    sourceFloor: -11.32,
+  },
+  {
+    file: '/models/station-b2-platform.glb',
+    floor: 'B2',
+    scale: 0.04,
+    sourceCenter: [281.2421, -61.5445],
+    targetCenter: [1.8, -1.7],
+    sourceFloor: -10.5,
+  },
+];
+
+function configureGltfLoader(loader) {
+  loader.setMeshoptDecoder(MeshoptDecoder);
 }
 
-function Floor({ level }) {
+function Floor({ level, selectable, onSelectPoint }) {
   const y = floorHeight(level);
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y - 0.18, 0]} receiveShadow>
-        <planeGeometry args={[25, 15]} />
-        <meshStandardMaterial color={level === 'B1' ? '#111b2b' : '#101e30'} roughness={0.92} />
+        <planeGeometry args={[BOUNDS.maxX - BOUNDS.minX, BOUNDS.maxZ - BOUNDS.minZ]} />
+        <meshStandardMaterial color={level === 'B2' ? '#151b2a' : '#101e30'} roughness={0.92} />
       </mesh>
-      {Array.from({ length: 26 }, (_, i) => (
-        <mesh key={`gx${i}`} position={[-12.5 + i, y - 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.012, 15]} />
-          <meshBasicMaterial color="#28405a" transparent opacity={0.55} />
+      {selectable && (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, y - 0.08, 0]}
+          onClick={onSelectPoint}
+        >
+          <planeGeometry args={[BOUNDS.maxX - BOUNDS.minX, BOUNDS.maxZ - BOUNDS.minZ]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
-      ))}
-      {Array.from({ length: 16 }, (_, i) => (
-        <mesh key={`gz${i}`} position={[0, y - 0.155, -7.5 + i]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[25, 0.012]} />
-          <meshBasicMaterial color="#28405a" transparent opacity={0.55} />
-        </mesh>
-      ))}
+      )}
     </group>
   );
 }
 
-function Building({ x, z, w, d, label, color = '#1c3854', floor = '1F' }) {
-  const h = 0.55;
-  return (
-    <group position={[x, floorHeight(floor), z]}>
-      <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w, h, d]} />
-        <meshStandardMaterial color={color} roughness={0.75} />
-      </mesh>
-      <mesh position={[0, h + 0.025, 0]}>
-        <boxGeometry args={[w + 0.08, 0.05, d + 0.08]} />
-        <meshStandardMaterial color="#3c7098" emissive="#102b47" emissiveIntensity={0.5} />
-      </mesh>
-      <Text position={[0, h + 0.3, 0]} fontSize={0.24} color="#d8e8f8" anchorX="center" outlineWidth={0.015} outlineColor="#08111c">
-        {label}
-      </Text>
-    </group>
-  );
+function StationArchitecture({ model }) {
+  const { scene } = useGLTF(model.file, true, true, configureGltfLoader);
+  const position = [
+    model.targetCenter[0] - model.sourceCenter[0] * model.scale,
+    floorHeight(model.floor) - model.sourceFloor * model.scale,
+    model.targetCenter[1] - model.sourceCenter[1] * model.scale,
+  ];
+  return <primitive object={scene} position={position} scale={model.scale} dispose={null} />;
 }
 
 function Zone({ node, onClick, selectedDestination }) {
@@ -133,16 +158,12 @@ function Robot({ robot, selected, onSelect, showLidar }) {
       + (floorHeight(robot.elevator.toFloor) - floorHeight(robot.elevator.fromFloor))
       * Math.min(1, robot.elevator.elapsed / robot.elevator.duration)
     : floorHeight(robot.floor);
-  const offsetZ = robot.elevator
-    ? floorOffsetZ(robot.elevator.fromFloor)
-      + (floorOffsetZ(robot.elevator.toFloor) - floorOffsetZ(robot.elevator.fromFloor))
-      * Math.min(1, robot.elevator.elapsed / robot.elevator.duration)
-    : floorOffsetZ(robot.floor);
   return (
     <group
-      position={[robot.x, floor + 0.12, robot.z + offsetZ]}
+      position={[robot.x, floor + 0.12, robot.z]}
       rotation={[0, robot.heading || 0, 0]}
       onClick={(e) => {
+        if (!onSelect) return;
         e.stopPropagation();
         onSelect(robot.id);
       }}
@@ -207,87 +228,6 @@ function Person({ person }) {
   );
 }
 
-function Escalator({ floor = '1F' }) {
-  return (
-    <group position={[4, floorHeight(floor) + 0.02, 2]} rotation={[0, -0.45, 0]}>
-      {Array.from({ length: 8 }, (_, i) => (
-        <mesh key={i} position={[i * 0.16, i * 0.055, 0]}>
-          <boxGeometry args={[0.22, 0.06, 0.8]} />
-          <meshStandardMaterial color="#6a8198" />
-        </mesh>
-      ))}
-      <mesh position={[0.55, 0.25, -0.46]}>
-        <boxGeometry args={[1.5, 0.04, 0.04]} />
-        <meshStandardMaterial color="#19d9c4" emissive="#19d9c4" emissiveIntensity={0.5} />
-      </mesh>
-    </group>
-  );
-}
-
-function UndergroundTracks() {
-  const railLines = [-4, 4].flatMap((centerX) => [centerX - 0.27, centerX + 0.27].map((x) => x));
-  return (
-    <group position={[0, floorHeight('B1'), 0]}>
-      {[-8, 8].map((x) => (
-        <group key={`platform-${x}`}>
-          <mesh position={[x, 0.08, 0]}>
-            <boxGeometry args={[2.8, 0.16, 13]} />
-            <meshStandardMaterial color="#19384b" emissive="#0a222d" emissiveIntensity={0.45} />
-          </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.18, 3.8]}>
-            <ringGeometry args={[0.78, 0.84, 40]} />
-            <meshBasicMaterial color="#2ae3d0" transparent opacity={0.72} />
-          </mesh>
-        </group>
-      ))}
-      {[-4, 4].map((centerX) => (
-        <mesh key={`track-bed-${centerX}`} position={[centerX, 0.025, 0]}>
-          <boxGeometry args={[1.3, 0.08, 13]} />
-          <meshStandardMaterial color="#172331" />
-        </mesh>
-      ))}
-      {railLines.map((x) => (
-        <mesh key={`rail-${x}`} position={[x, 0.11, 0]}>
-          <boxGeometry args={[0.065, 0.08, 13]} />
-          <meshStandardMaterial color="#a9c2d0" metalness={0.7} roughness={0.25} />
-        </mesh>
-      ))}
-      {Array.from({ length: 20 }, (_, i) =>
-        [-4, 4].map((centerX) => (
-          <mesh key={`sleeper-${centerX}-${i}`} position={[centerX, 0.09, -6.1 + i * 0.64]}>
-            <boxGeometry args={[1.15, 0.07, 0.1]} />
-            <meshStandardMaterial color="#546879" />
-          </mesh>
-        )),
-      )}
-      {[-4, 4].map((x, i) => (
-        <Text key={`track-label-${x}`} position={[x, 0.28, -5.8]} fontSize={0.2} color="#ffca82" anchorX="center">
-          TRACK {i + 1}
-        </Text>
-      ))}
-    </group>
-  );
-}
-
-function ElevatorShaft({ floor }) {
-  const y = floorHeight(floor);
-  return (
-    <group position={[3, y, -3]}>
-      <mesh position={[0, 0.85, 0]}>
-        <boxGeometry args={[1.5, 1.7, 1.5]} />
-        <meshBasicMaterial color="#32e4d1" transparent opacity={0.07} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh position={[0, 0.85, 0]}>
-        <boxGeometry args={[1.55, 1.75, 1.55]} />
-        <meshBasicMaterial color="#44efdc" wireframe transparent opacity={0.45} />
-      </mesh>
-      <Text position={[0, 1.9, 0]} fontSize={0.18} color="#a3fff1" anchorX="center">
-        ELEVATOR · 1F ↕ B1
-      </Text>
-    </group>
-  );
-}
-
 function RouteLine({ robot, floor, route = robot.route, color = robot.color, dashed = false }) {
   const points = useMemo(() => {
     const pts = (route || [])
@@ -302,10 +242,10 @@ function RouteLine({ robot, floor, route = robot.route, color = robot.color, das
 
 function Scene({
   robots, pedestrians, extras, selected, onSelect, missionDraft,
-  onMapPoint, plannedPath, layers,
+  onMapPoint, plannedPath, layers, selectionFloor,
 }) {
   const active = robots.find((robot) => robot.id === selected);
-  const levels = ['1F', 'B1'];
+  const levels = ['1F', 'B1', 'B2'];
   const drawPath = (path, floor, color, dashed = false) => {
     const points = (path || [])
       .filter((point) => point.floor === floor)
@@ -313,11 +253,11 @@ function Scene({
     if (points.length < 2) return null;
     return <Line points={points} color={color} transparent opacity={0.96} lineWidth={2.5} dashed={dashed} dashSize={0.38} gapSize={0.22} />;
   };
-  const selectFloorPoint = (event, floor) => {
-    if (!missionDraft || !onMapPoint) return;
+  const selectFloorPoint = (event) => {
+    if (!missionDraft?.selecting || !onMapPoint) return;
     event.stopPropagation();
-    const point = event.point;
-    onMapPoint({ x: point.x, z: point.z - floorOffsetZ(floor), floor });
+    const floor = selectionFloor || '1F';
+    onMapPoint({ x: event.point.x, z: event.point.z, floor });
   };
   return (
     <>
@@ -326,38 +266,33 @@ function Scene({
       <ambientLight intensity={1.5} />
       <directionalLight position={[8, 14, 6]} intensity={2.2} castShadow />
       <pointLight position={[-5, 5, -3]} color="#1ddfc8" intensity={30} distance={15} />
+      {architecture.map((model) => (
+        <Suspense key={model.file} fallback={null}>
+          <StationArchitecture model={model} />
+        </Suspense>
+      ))}
       {levels.map((level) => {
         const floorY = floorHeight(level);
         const startPoint = missionDraft?.start || active?.originPoint;
         const destinationPoint = missionDraft?.destination || active?.targetPoint;
         const visibleDraftPath = missionDraft?.destination ? plannedPath : [];
         return (
-          <group
-            key={level}
-            position={[0, 0, floorOffsetZ(level)]}
-            onClick={(event) => selectFloorPoint(event, level)}
-          >
-            <Floor level={level} />
-            <Text position={[0, floorY + 1.2, -6.5]} fontSize={0.38} color={level === '1F' ? '#8ff9e7' : '#ffcc82'} anchorX="center" outlineWidth={0.04} outlineColor="#07111e">
-              {level === '1F' ? '1F · CONCOURSE' : 'B1 · TRAIN PLATFORMS'}
+          <group key={level}>
+            <Floor
+              level={level}
+              selectable={missionDraft?.selecting && selectionFloor === level}
+              onSelectPoint={selectFloorPoint}
+            />
+            <Text position={[0, floorY + 1.2, -6.5]} fontSize={0.38} color={level === '1F' ? '#8ff9e7' : level === 'B1' ? '#ffcc82' : '#b4a1ff'} anchorX="center" outlineWidth={0.04} outlineColor="#07111e">
+              {level === '1F' ? '1F · STATION CONCOURSE' : `${level} · ${level === 'B1' ? 'CENTRAL HALL' : 'CONCOURSE + PLATFORMS'}`}
             </Text>
-            {buildings.filter((building) => (building.floor || '1F') === level).map((building) => (
-              <Building key={building.id} {...building} />
-            ))}
             {nodes.filter((node) => node.floor === level).map((node) => (
               <Zone
                 key={node.id}
                 node={node}
-                onClick={missionDraft ? (event) => selectFloorPoint(event, level) : undefined}
                 selectedDestination={destinationPoint?.floor === level
                   && Math.hypot(destinationPoint.x - node.x, destinationPoint.z - node.z) <= (node.radius || 0.7)}
               />
-            ))}
-            {pillars.filter((pillar) => (pillar.floor || '1F') === level).map((pillar) => (
-              <mesh key={pillar.id} position={[pillar.x, floorY + 0.45, pillar.z]} castShadow>
-                <cylinderGeometry args={[pillar.r, pillar.r, 0.9, 16]} />
-                <meshStandardMaterial color="#4a6278" />
-              </mesh>
             ))}
             {layers.geofence && geofences.filter((fence) => (fence.floor || '1F') === level).map((fence) => (
               <group key={fence.id} position={[fence.x, floorY, fence.z]}>
@@ -368,9 +303,6 @@ function Scene({
                 <Text position={[0, 0.55, 0]} fontSize={0.2} color="#ffb199" anchorX="center">{fence.label}</Text>
               </group>
             ))}
-            {level === '1F' && <Escalator />}
-            {level === 'B1' && <UndergroundTracks />}
-            <ElevatorShaft floor={level} />
             {(extras || []).filter((extra) => (extra.floor || '1F') === level).map((extra) => (
               <mesh key={extra.id} position={[extra.x, floorY + 0.22, extra.z]} castShadow>
                 {extra.kind === 'cone' ? <coneGeometry args={[extra.r, 0.44, 12]} /> : <boxGeometry args={[extra.r * 1.5, 0.32, extra.r * 1.1]} />}
@@ -397,7 +329,6 @@ function Scene({
                 </group>
               )
             ))}
-            <ContactShadows position={[0, floorY - 0.12, 0]} opacity={0.35} scale={25} blur={2} />
           </group>
         );
       })}
@@ -406,15 +337,15 @@ function Scene({
           key={robot.id}
           robot={robot}
           selected={selected === robot.id}
-          onSelect={onSelect}
+          onSelect={missionDraft?.selecting ? undefined : onSelect}
           showLidar={layers.lidar}
         />
       ))}
       <OrbitControls
         makeDefault
         target={[0, 0, 0]}
-        minDistance={30}
-        maxDistance={62}
+        minDistance={5}
+        maxDistance={160}
         maxPolarAngle={1.48}
         minPolarAngle={0.45}
         enablePan
@@ -431,7 +362,11 @@ function Scene({
 
 export default function StationScene(props) {
   return (
-    <Canvas shadows camera={{ position: [0, 24, 33], fov: 44 }} dpr={[1, 1.7]}>
+    <Canvas
+      camera={{ position: [0, 28, 44], fov: 44 }}
+      dpr={[1, 1.25]}
+      gl={{ antialias: false, powerPreference: 'high-performance' }}
+    >
       <Scene {...props} />
     </Canvas>
   );

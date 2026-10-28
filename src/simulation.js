@@ -1,4 +1,6 @@
 export const BOUNDS = { minX: -11.4, maxX: 11.4, minZ: -6.7, maxZ: 6.7 };
+export const FLOOR_ORDER = ['1F', 'B1', 'B2'];
+const MAP_CLEARANCE = 0.18;
 
 export const nodes = [
   { id: 'gate', label: '개찰구', x: -8, z: 0, floor: '1F', radius: 0.72 },
@@ -11,9 +13,12 @@ export const nodes = [
   { id: 'exit', label: '출구', x: 9.9, z: 3.4, floor: '1F', radius: 0.72 },
   { id: 'stairs', label: '계단·에스컬레이터', x: 4, z: 2, floor: '1F', forbidden: true },
   { id: 'b1_lift', label: 'B1 엘리베이터', x: 3, z: -3, floor: 'B1', radius: 0.9 },
-  { id: 'b1_concourse', label: 'B1 연결통로', x: 3, z: 3.8, floor: 'B1', radius: 0.8 },
-  { id: 'b1_platform_west', label: '1번 승강장', x: -8, z: 3.8, floor: 'B1', radius: 0.8 },
-  { id: 'b1_platform_east', label: '2번 승강장', x: 8, z: 3.8, floor: 'B1', radius: 0.8 },
+  { id: 'b1_concourse', label: 'B1 중앙홀', x: 3, z: 4.2, floor: 'B1', radius: 0.8 },
+  { id: 'b1_platform_west', label: '1번 승강장', x: -8, z: -1, floor: 'B1', radius: 0.8 },
+  { id: 'b1_platform_east', label: '2번 승강장', x: 8, z: -1, floor: 'B1', radius: 0.8 },
+  { id: 'b2_lift', label: 'B2 엘리베이터', x: 3, z: -3, floor: 'B2', radius: 0.9 },
+  { id: 'b2_concourse', label: 'B2 대합실', x: -7, z: 1, floor: 'B2', radius: 0.9 },
+  { id: 'b2_platform', label: 'B2 승강장', x: 7.5, z: -1.7, floor: 'B2', radius: 0.9 },
 ];
 
 const links = {
@@ -26,11 +31,29 @@ const links = {
   kiosk: ['hall', 'exit'],
   exit: ['platform', 'kiosk'],
   stairs: ['kiosk', 'lift', 'exit'],
-  b1_lift: ['lift', 'b1_concourse'],
+  b1_lift: ['lift', 'b1_concourse', 'b2_lift'],
   b1_concourse: ['b1_lift', 'b1_platform_west', 'b1_platform_east'],
   b1_platform_west: ['b1_concourse'],
   b1_platform_east: ['b1_concourse'],
+  b2_lift: ['b1_lift', 'b2_concourse', 'b2_platform'],
+  b2_concourse: ['b2_lift', 'b2_platform'],
+  b2_platform: ['b2_lift', 'b2_concourse'],
 };
+
+export const stationAreas = [
+  { id: '1f-concourse', floor: '1F', x: 0, z: 0, w: 19, d: 10.5, label: '중앙 대합실', kind: 'concourse', color: '#18364a' },
+  { id: '1f-entrance', floor: '1F', x: -8.4, z: 0, w: 3.2, d: 4.2, label: '개찰구', kind: 'service', color: '#25465b' },
+  { id: 'b1-concourse', floor: 'B1', x: 0, z: 4.25, w: 19, d: 3.4, label: 'B1 중앙홀 · 환승 통로', kind: 'concourse', color: '#1b3d4c' },
+  { id: 'b1-platform-west', floor: 'B1', x: -8, z: -1, w: 2.5, d: 7.4, label: '1번 승강장', kind: 'platform', color: '#24465a' },
+  { id: 'b1-platform-east', floor: 'B1', x: 8, z: -1, w: 2.5, d: 7.4, label: '2번 승강장', kind: 'platform', color: '#24465a' },
+  { id: 'b1-track-west', floor: 'B1', x: -6, z: -1, w: 1.4, d: 6.4, label: '선로 · 통행 금지', kind: 'track', axis: 'z', color: '#101a25' },
+  { id: 'b1-track-east', floor: 'B1', x: 6, z: -1, w: 1.4, d: 6.4, label: '선로 · 통행 금지', kind: 'track', axis: 'z', color: '#101a25' },
+  { id: 'b2-concourse', floor: 'B2', x: -6.7, z: 0.8, w: 9, d: 8.2, label: 'B2 대합실', kind: 'concourse', color: '#302c4b' },
+  { id: 'b2-platform', floor: 'B2', x: 1.8, z: -1.7, w: 18, d: 2.8, label: 'B2 승강장', kind: 'platform', color: '#2b3850' },
+  { id: 'b2-track', floor: 'B2', x: 1.8, z: -4.6, w: 18, d: 1.2, label: '선로 · 통행 금지', kind: 'track', axis: 'x', color: '#101a25' },
+];
+
+const elevatorNodeByFloor = { '1F': 'lift', B1: 'b1_lift', B2: 'b2_lift' };
 
 export const buildings = [
   { id: 'gate', x: -7, z: -2.5, w: 4, d: 2.5, label: '개찰구', color: '#173b55', floor: '1F' },
@@ -40,6 +63,17 @@ export const buildings = [
   { id: 'charge', x: -8, z: 4.5, w: 2.2, d: 1.5, label: '충전존', color: '#16443f', floor: '1F' },
   { id: 'kiosk', x: 1, z: 5, w: 2, d: 1.4, label: '호출 키오스크', color: '#25435e', floor: '1F' },
   { id: 'exit', x: 8, z: 4.5, w: 2.4, d: 1.5, label: '출구 · 환승', color: '#1c3854', floor: '1F' },
+  ...stationAreas.filter((area) => area.kind === 'track').map((area) => ({
+    id: area.id,
+    x: area.x,
+    z: area.z,
+    w: area.w,
+    d: area.d,
+    label: area.label,
+    color: area.color,
+    floor: area.floor,
+    kind: area.kind,
+  })),
 ];
 
 export const pillars = [
@@ -47,17 +81,35 @@ export const pillars = [
   { id: 'p2', x: 2.2, z: 0.4, r: 0.38, floor: '1F' },
   { id: 'p3', x: 5.4, z: -1.2, r: 0.34, floor: '1F' },
   { id: 'p4', x: -1.2, z: 2.6, r: 0.32, floor: '1F' },
+  { id: 'b1-p1', x: -2.1, z: 3.6, r: 0.32, floor: 'B1' },
+  { id: 'b1-p2', x: 2.1, z: 3.6, r: 0.32, floor: 'B1' },
+  { id: 'b2-p1', x: -3.6, z: -1.6, r: 0.32, floor: 'B2' },
+  { id: 'b2-p2', x: -7.3, z: 3.3, r: 0.32, floor: 'B2' },
 ];
 
 export const geofences = [
   { id: 'stairs', x: 4, z: 2, r: 1.15, label: '휠체어 금지', floor: '1F' },
+  { id: 'b1-stairs', x: -1.2, z: 4.2, r: 0.72, label: '계단 · 휠체어 금지', floor: 'B1' },
+  { id: 'b2-stairs', x: -2.8, z: 3.7, r: 0.72, label: '계단 · 휠체어 금지', floor: 'B2' },
 ];
 
-export const WANDER = [
-  [-8.5, 1.6], [-5.5, 0.2], [-2.8, 1.8], [0.4, 1.2], [2.6, 1.6],
-  [6.2, 1.4], [9.2, 1.2], [-8.2, -0.2], [-4.8, 3.4], [0.2, 2.8],
-  [4.8, 3.6], [8.6, 2.6], [-1.6, -1.4], [4.6, -1.6], [9.4, -0.2],
-];
+const WANDER_BY_FLOOR = {
+  '1F': [
+    [-8.5, 1.6], [-5.5, 0.2], [-2.8, 1.8], [0.4, 1.2], [2.6, 1.6],
+    [6.2, 1.4], [9.2, 1.2], [-8.2, -0.2], [-4.8, 3.4], [0.2, 2.8],
+    [4.8, 3.6], [8.6, 2.6], [-1.6, -1.4], [4.6, -1.6], [9.4, -0.2],
+  ],
+  B1: [
+    [-8, -3.4], [-8, -1], [-8, 1.4], [8, -3.4], [8, -1], [8, 1.4],
+    [-4.4, 4.2], [-2.2, 4.2], [2.2, 4.2], [4.4, 4.2], [0, -4.8],
+  ],
+  B2: [
+    [-9.3, -1], [-7.2, -2.2], [-6, 0], [-4.5, 2.5], [-2.5, 1.6],
+    [0, -1.7], [3, -1.7], [6, -1.7], [9, -1.7], [5, 0.4], [8.8, 0.4],
+  ],
+};
+
+const PED_FLOOR_DISTRIBUTION = ['1F', '1F', 'B1', 'B1', 'B2', 'B2'];
 
 export function hypot(ax, az, bx, bz) {
   return Math.hypot(ax - bx, az - bz);
@@ -111,16 +163,16 @@ export function resolveMapTarget(x, z, floor = '1F', extras = []) {
       || pz < BOUNDS.minZ + radius || pz > BOUNDS.maxZ - radius
     ) return false;
     for (const building of buildings) {
-      if ((building.floor || '1F') === floor && rectangleClearance(px, pz, building, radius) < 0.12) return false;
+      if ((building.floor || '1F') === floor && rectangleClearance(px, pz, building, radius) < MAP_CLEARANCE) return false;
     }
     for (const pillar of pillars) {
-      if ((pillar.floor || '1F') === floor && hypot(px, pz, pillar.x, pillar.z) < pillar.r + radius + 0.12) return false;
+      if ((pillar.floor || '1F') === floor && hypot(px, pz, pillar.x, pillar.z) < pillar.r + radius + MAP_CLEARANCE) return false;
     }
     for (const fence of geofences) {
-      if ((fence.floor || '1F') === floor && hypot(px, pz, fence.x, fence.z) < fence.r + radius + 0.12) return false;
+      if ((fence.floor || '1F') === floor && hypot(px, pz, fence.x, fence.z) < fence.r + radius + MAP_CLEARANCE) return false;
     }
     for (const extra of extras) {
-      if ((extra.floor || '1F') === floor && hypot(px, pz, extra.x, extra.z) < extra.r + radius + 0.12) return false;
+      if ((extra.floor || '1F') === floor && hypot(px, pz, extra.x, extra.z) < extra.r + radius + MAP_CLEARANCE) return false;
     }
     return true;
   };
@@ -145,23 +197,23 @@ function mapPositionFree(x, z, floor, extras = []) {
     || z < BOUNDS.minZ + ROBOT_RADIUS || z > BOUNDS.maxZ - ROBOT_RADIUS
   ) return false;
   for (const building of buildings) {
-    if ((building.floor || '1F') === floor && rectangleClearance(x, z, building, ROBOT_RADIUS) < 0.12) return false;
+    if ((building.floor || '1F') === floor && rectangleClearance(x, z, building, ROBOT_RADIUS) < MAP_CLEARANCE) return false;
   }
   for (const pillar of pillars) {
-    if ((pillar.floor || '1F') === floor && hypot(x, z, pillar.x, pillar.z) < pillar.r + ROBOT_RADIUS + 0.12) return false;
+    if ((pillar.floor || '1F') === floor && hypot(x, z, pillar.x, pillar.z) < pillar.r + ROBOT_RADIUS + MAP_CLEARANCE) return false;
   }
   for (const fence of geofences) {
-    if ((fence.floor || '1F') === floor && hypot(x, z, fence.x, fence.z) < fence.r + ROBOT_RADIUS + 0.12) return false;
+    if ((fence.floor || '1F') === floor && hypot(x, z, fence.x, fence.z) < fence.r + ROBOT_RADIUS + MAP_CLEARANCE) return false;
   }
   for (const extra of extras) {
-    if ((extra.floor || '1F') === floor && hypot(x, z, extra.x, extra.z) < extra.r + ROBOT_RADIUS + 0.12) return false;
+    if ((extra.floor || '1F') === floor && hypot(x, z, extra.x, extra.z) < extra.r + ROBOT_RADIUS + MAP_CLEARANCE) return false;
   }
   return true;
 }
 
 function segmentIsFree(a, b, floor, extras = []) {
   const distance = hypot(a.x, a.z, b.x, b.z);
-  const samples = Math.ceil(distance / 0.18);
+  const samples = Math.ceil(distance / 0.1);
   for (let index = 0; index <= samples; index += 1) {
     const t = samples ? index / samples : 0;
     if (!mapPositionFree(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t, floor, extras)) return false;
@@ -279,16 +331,33 @@ export function findMapPath(start, goal, extras = []) {
   if (startFloor === goalFloor) {
     return findSameFloorPath(start, goal, startFloor, extras);
   }
-  const sourceLift = nodes.find((node) => node.id === (startFloor === 'B1' ? 'b1_lift' : 'lift'));
-  const destinationLift = nodes.find((node) => node.id === (goalFloor === 'B1' ? 'b1_lift' : 'lift'));
-  const toLift = findSameFloorPath(start, sourceLift, startFloor, extras);
-  const fromLift = findSameFloorPath(destinationLift, goal, goalFloor, extras);
-  if (!toLift || !fromLift) return null;
-  return [
-    ...toLift,
-    { x: destinationLift.x, z: destinationLift.z, floor: goalFloor, elevator: true },
-    ...fromLift,
-  ];
+  const startIndex = FLOOR_ORDER.indexOf(startFloor);
+  const goalIndex = FLOOR_ORDER.indexOf(goalFloor);
+  if (startIndex < 0 || goalIndex < 0) return null;
+
+  const step = Math.sign(goalIndex - startIndex);
+  let current = start;
+  const path = [];
+  for (let index = startIndex; index !== goalIndex; index += step) {
+    const fromFloor = FLOOR_ORDER[index];
+    const toFloor = FLOOR_ORDER[index + step];
+    const sourceLift = nodeById(elevatorNodeByFloor[fromFloor]);
+    const destinationLift = nodeById(elevatorNodeByFloor[toFloor]);
+    const toLift = findSameFloorPath(current, sourceLift, fromFloor, extras);
+    if (!toLift) return null;
+    path.push(...toLift);
+    path.push({
+      x: destinationLift.x,
+      z: destinationLift.z,
+      floor: toFloor,
+      elevator: true,
+    });
+    current = destinationLift;
+  }
+  const fromLift = findSameFloorPath(current, goal, goalFloor, extras);
+  if (!fromLift) return null;
+  path.push(...fromLift);
+  return path;
 }
 
 function crowdCost(ax, az, bx, bz, pedestrians) {
@@ -384,15 +453,6 @@ export function formatEta(seconds) {
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-function inBuilding(x, z, padding = 0.35, floor = '1F') {
-  return buildings.some((b) => {
-    if ((b.floor || '1F') !== floor) return false;
-    const hx = b.w / 2 + padding;
-    const hz = b.d / 2 + padding;
-    return Math.abs(x - b.x) < hx && Math.abs(z - b.z) < hz;
-  });
-}
-
 function pushOut(x, z, radius, floor = '1F') {
   let px = x;
   let pz = z;
@@ -424,23 +484,51 @@ function pushOut(x, z, radius, floor = '1F') {
     }
   }
 
+  for (const fence of geofences) {
+    if ((fence.floor || '1F') !== floor) continue;
+    const d = hypot(px, pz, fence.x, fence.z);
+    const min = fence.r + radius;
+    if (d < min && d > 1e-4) {
+      const k = min / d;
+      px = fence.x + (px - fence.x) * k;
+      pz = fence.z + (pz - fence.z) * k;
+    }
+  }
+
   return { x: px, z: pz };
 }
 
-function randomWander() {
+function pedestrianPositionFree(x, z, floor) {
+  if (
+    x < BOUNDS.minX + 0.2 || x > BOUNDS.maxX - 0.2
+    || z < BOUNDS.minZ + 0.2 || z > BOUNDS.maxZ - 0.2
+  ) return false;
+  if (buildings.some((building) => (building.floor || '1F') === floor
+    && rectangleClearance(x, z, building, 0.2) < 0.1)) return false;
+  if (pillars.some((pillar) => (pillar.floor || '1F') === floor
+    && hypot(x, z, pillar.x, pillar.z) < pillar.r + 0.3)) return false;
+  if (geofences.some((fence) => (fence.floor || '1F') === floor
+    && hypot(x, z, fence.x, fence.z) < fence.r + 0.3)) return false;
+  return true;
+}
+
+function randomWander(floor = '1F') {
+  const choices = WANDER_BY_FLOOR[floor] || WANDER_BY_FLOOR['1F'];
   for (let i = 0; i < 12; i++) {
-    const [x, z] = WANDER[Math.floor(Math.random() * WANDER.length)];
+    const [x, z] = choices[Math.floor(Math.random() * choices.length)];
     const jx = x + (Math.random() - 0.5) * 1.4;
     const jz = z + (Math.random() - 0.5) * 1.1;
-    if (!inBuilding(jx, jz, 0.2, '1F')) return { x: jx, z: jz };
+    if (pedestrianPositionFree(jx, jz, floor)) return { x: jx, z: jz };
   }
-  return { x: 0, z: 1.5 };
+  const fallback = nodes.find((node) => node.floor === floor && !node.forbidden);
+  return fallback ? { x: fallback.x, z: fallback.z } : { x: 0, z: 1.5 };
 }
 
 function spawnPedestrians(count) {
   return Array.from({ length: count }, (_, i) => {
-    const spawn = randomWander();
-    const goal = randomWander();
+    const floor = PED_FLOOR_DISTRIBUTION[i % PED_FLOOR_DISTRIBUTION.length];
+    const spawn = randomWander(floor);
+    const goal = randomWander(floor);
     return {
       id: `P-${String(i + 1).padStart(2, '0')}`,
       x: spawn.x,
@@ -452,7 +540,7 @@ function spawnPedestrians(count) {
       speed: 0.55 + Math.random() * 0.55,
       pause: Math.random() * 2,
       hue: i % 2,
-      floor: '1F',
+      floor,
     };
   });
 }
@@ -510,11 +598,12 @@ export function createWorld() {
         id: 'SW-02',
         name: '모빌리티 02',
         x: 1,
-        z: 3.2,
+        z: 4.2,
+        floor: 'B1',
         battery: 64,
         status: '승객 대기',
-        target: 'kiosk',
-        route: ['kiosk'],
+        target: 'b1_platform_east',
+        route: ['b1_platform_east'],
         occupied: false,
         color: '#6aa7ff',
         cruise: 0.78,
@@ -523,11 +612,12 @@ export function createWorld() {
         id: 'SW-03',
         name: '모빌리티 03',
         x: -5.4,
-        z: 3.6,
+        z: 0.2,
+        floor: 'B2',
         battery: 18,
         status: '충전 복귀',
         target: 'charge',
-        route: ['hall', 'charge'],
+        route: ['charge'],
         occupied: false,
         color: '#f6bd60',
         cruise: 0.7,
@@ -539,7 +629,7 @@ export function createWorld() {
     requestCount: 2,
     eventLog: [
       stampEvent('success', '가상 역사 시뮬레이터 기동 · 휠체어 3대'),
-      stampEvent('info', '보행자 에이전트 20명 스폰 · 혼잡 회피 활성'),
+      stampEvent('info', '1F · B1 · B2 보행자 20명 스폰 · 혼잡 회피 활성'),
       stampEvent('warn', 'SW-03 배터리 20% 미만 · 충전 복귀 경로 생성'),
     ],
   };
@@ -570,6 +660,12 @@ export function createWorld() {
 
 export function addRobot(world) {
   const index = world.robots.length + 1;
+  const floor = FLOOR_ORDER.reduce((leastPopulated, candidate) =>
+    world.robots.filter((robot) => robot.floor === candidate).length
+      < world.robots.filter((robot) => robot.floor === leastPopulated).length
+      ? candidate
+      : leastPopulated,
+  FLOOR_ORDER[0]);
   const candidates = [
     { x: -9.8, z: 1.8 },
     { x: -6.2, z: 2.2 },
@@ -579,9 +675,8 @@ export function addRobot(world) {
     { x: -10, z: -0.5 },
   ];
   const spawn = candidates.find((candidate) =>
-    buildings.every((building) => rectangleClearance(candidate.x, candidate.z, building, 0.42) >= 0.12)
-      && pillars.every((pillar) => hypot(candidate.x, candidate.z, pillar.x, pillar.z) >= pillar.r + 0.54)
-      && world.robots.every((robot) => robot.floor !== '1F' || hypot(robot.x, robot.z, candidate.x, candidate.z) >= 1.1),
+    mapPositionFree(candidate.x, candidate.z, floor, world.extras)
+      && world.robots.every((robot) => robot.floor !== floor || hypot(robot.x, robot.z, candidate.x, candidate.z) >= 1.1),
   );
   if (!spawn) {
     return {
@@ -591,14 +686,15 @@ export function addRobot(world) {
   }
   const colors = ['#20e3cf', '#6aa7ff', '#f6bd60', '#bb8cff', '#ff7b91', '#86df8c'];
   const id = `SW-${String(index).padStart(2, '0')}`;
+  const target = nearestNode(spawn.x, spawn.z, true, floor).id;
   const robot = makeRobot({
     id,
     name: `모빌리티 ${String(index).padStart(2, '0')}`,
     ...spawn,
     battery: 100,
     status: '대기',
-    target: 'gate',
-    route: ['gate'],
+    target,
+    route: [target],
     occupied: false,
     color: colors[(index - 1) % colors.length],
     cruise: 0.72,
@@ -611,9 +707,9 @@ export function addRobot(world) {
 
 export function scenarioObstacles() {
   return [
-    { id: 'bag-1', x: -1.2, z: 0.15, r: 0.42, kind: 'luggage' },
-    { id: 'bag-2', x: 0.6, z: -0.35, r: 0.36, kind: 'cone' },
-    { id: 'bag-3', x: 2.8, z: 0.55, r: 0.4, kind: 'luggage' },
+    { id: 'bag-1', x: -1.2, z: 0.15, r: 0.42, kind: 'luggage', floor: '1F' },
+    { id: 'bag-2', x: 0.6, z: 2.6, r: 0.36, kind: 'cone', floor: 'B1' },
+    { id: 'bag-3', x: 4.2, z: -0.2, r: 0.4, kind: 'luggage', floor: 'B2' },
   ];
 }
 
@@ -713,7 +809,7 @@ function tickPedestrians(pedestrians, robots, extras, dt) {
     let tx = p.tx;
     let tz = p.tz;
     if (hypot(p.x, p.z, tx, tz) < 0.45) {
-      const g = randomWander();
+      const g = randomWander(p.floor || '1F');
       tx = g.x;
       tz = g.z;
       pause = Math.random() < 0.22 ? 1.2 + Math.random() * 2.4 : 0;
@@ -894,7 +990,7 @@ function tickRobot(robot, ctx) {
   const gd = Math.hypot(gdx, gdz) || 1;
   const legacyElevatorFloor = !missionPathActive && !isPastLastWaypoint
     && nodeById(goalId).floor !== next.floor
-    && (route[currentRouteIndex] === 'lift' || route[currentRouteIndex] === 'b1_lift')
+    && Object.values(elevatorNodeByFloor).includes(route[currentRouteIndex])
     ? nodeById(goalId).floor
     : null;
 
@@ -904,7 +1000,7 @@ function tickRobot(robot, ctx) {
   ) {
     const destinationFloor = missionPathActive ? goal.floor : legacyElevatorFloor;
     const destinationId = missionPathActive
-      ? destinationFloor === 'B1' ? 'b1_lift' : 'lift'
+      ? elevatorNodeByFloor[destinationFloor]
       : goalId;
     events.push(stampEvent('info', `${next.id} 엘리베이터 탑승 · ${destinationFloor} 이동`));
     return {
@@ -1184,7 +1280,9 @@ export function tickWorld(world, dt, flags) {
 
   let nextPeds = pedestrians;
   if (flags.obstacle && pedestrians.length < 28 && Math.random() < dt * 0.4) {
-    const spawn = { x: -0.4, z: 0.2 };
+    const floor = FLOOR_ORDER[Math.floor(Math.random() * FLOOR_ORDER.length)];
+    const spawn = randomWander(floor);
+    const goal = randomWander(floor);
     nextPeds = [
       ...pedestrians,
       {
@@ -1192,11 +1290,12 @@ export function tickWorld(world, dt, flags) {
         ...spawn,
         vx: 0,
         vz: 0,
-        tx: 3.2,
-        tz: 0.4,
+        tx: goal.x,
+        tz: goal.z,
         speed: 0.7,
         pause: 0,
         hue: 1,
+        floor,
       },
     ];
   }
@@ -1258,7 +1357,9 @@ export function assignMission(world, robotId, from, to) {
           missionPath,
           missionPathIndex: 0,
           missionStartIndex: toOriginPath?.length || 0,
-          plannedMissionPath: onwardPath,
+          plannedMissionPath: originPoint && onwardPath
+            ? [originPoint, ...onwardPath]
+            : onwardPath,
           status: '이동 중',
           occupied: true,
           stuck: 0,

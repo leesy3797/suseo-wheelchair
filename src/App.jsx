@@ -17,7 +17,9 @@ function pushEvents(prev, incoming) {
   return [...stamped, ...prev].slice(0, 24);
 }
 
-export default function App() {
+export default Dashboard;
+
+function Dashboard() {
   const [world, setWorld] = useState(createWorld);
   const [selected, setSelected] = useState('SW-01');
   const [paused, setPaused] = useState(false);
@@ -45,6 +47,7 @@ export default function App() {
             robots: w.robots.map((r) => ({ ...r, speed: 0, status: '비상 정지' })),
           }));
         }
+
         return;
       }
       setWorld((w) => tickWorld(w, dt, flags));
@@ -68,33 +71,61 @@ export default function App() {
   const draftRobot = missionDraft ? robots.find((r) => r.id === missionDraft.robotId) : null;
   const plannedPath = useMemo(() => {
     if (!missionDraft?.start || !missionDraft?.destination) return [];
-    return findMapPath(missionDraft.start, missionDraft.destination, world.extras) || [];
+    const path = findMapPath(missionDraft.start, missionDraft.destination, world.extras);
+    return path?.length ? [missionDraft.start, ...path] : [];
   }, [missionDraft?.start, missionDraft?.destination, world.extras]);
 
   const startMissionSelection = (robotId = selected) => {
     const robot = robots.find((r) => r.id === robotId) || robots[0];
     setSelected(robot.id);
-    setMissionDraft({ robotId: robot.id, start: null, destination: null });
+    setMissionDraft({
+      robotId: robot.id,
+      start: null,
+      destination: null,
+      selecting: 'start',
+      selectionFloor: robot.floor,
+    });
   };
 
   const selectRobot = (robotId) => {
     setSelected(robotId);
-    setMissionDraft({ robotId, start: null, destination: null });
+    const robot = robots.find((item) => item.id === robotId);
+    setMissionDraft({
+      robotId,
+      start: null,
+      destination: null,
+      selecting: 'start',
+      selectionFloor: robot?.floor || '1F',
+    });
   };
 
   const selectMapPoint = (point) => {
-    if (!missionDraft || !draftRobot) return;
-    const spot = nodes.find((node) => node.floor === point.floor
-      && Math.hypot(node.x - point.x, node.z - point.z) <= (node.radius || 0.7));
-    const resolved = spot
-      ? { x: spot.x, z: spot.z, floor: spot.floor, radius: spot.radius }
-      : resolveMapTarget(point.x, point.z, point.floor, world.extras);
+    if (!missionDraft || !draftRobot || !missionDraft.selecting) return;
+    const floor = missionDraft.selectionFloor || point.floor;
+    const resolved = resolveMapTarget(point.x, point.z, floor, world.extras);
     if (!resolved) {
       log('warn', '선택 위치 주변에 휠체어가 접근할 수 있는 공간이 없습니다');
       return;
     }
+    if (missionDraft.selecting === 'start') {
+      const destinationReachable = Boolean(
+        missionDraft.destination
+        && findMapPath(resolved, missionDraft.destination, world.extras)?.length,
+      );
+      setMissionDraft({
+        ...missionDraft,
+        start: resolved,
+        destination: destinationReachable ? missionDraft.destination : null,
+        selecting: destinationReachable ? null : 'destination',
+      });
+      if (missionDraft.destination && !destinationReachable) {
+        log('warn', '출발지를 변경해 기존 도착지를 초기화했습니다. 도착지를 다시 선택하세요');
+      }
+      return;
+    }
     if (!missionDraft.start) {
-      setMissionDraft({ ...missionDraft, start: resolved });
+      log('warn', '먼저 출발지를 지정하세요');
+      setMissionDraft({ ...missionDraft, selecting: 'start' });
       return;
     }
     const route = findMapPath(missionDraft.start, resolved, world.extras);
@@ -102,7 +133,23 @@ export default function App() {
       log('warn', '출발지와 목적지 사이에 접근 가능한 경로가 없습니다');
       return;
     }
-    setMissionDraft({ ...missionDraft, destination: resolved });
+    setMissionDraft({ ...missionDraft, destination: resolved, selecting: null });
+  };
+
+  const selectMissionFloor = (floor) => {
+    setMissionDraft((draft) => draft && ({
+      ...draft,
+      selectionFloor: floor,
+      selecting: draft.selecting || (draft.start ? 'destination' : 'start'),
+    }));
+  };
+
+  const editMissionPoint = (field) => {
+    setMissionDraft((draft) => draft && ({
+      ...draft,
+      selecting: field,
+      selectionFloor: draft[field]?.floor || draft.selectionFloor,
+    }));
   };
 
   const dispatch = () => {
@@ -179,20 +226,12 @@ export default function App() {
   const toggleLayer = (key) => setLayers((l) => ({ ...l, [key]: !l[key] }));
   const slam = estop ? 0 : Math.max(86, 99.4 - (active.avoiding ? 4.2 : 0) - (active.nearestDist < 1 ? 3 : 0));
   const lidarLabel = active.nearestDist < 8 ? `${active.nearestDist.toFixed(1)}m` : '—';
-  const draftStartSpot = missionDraft?.start
-    ? nodes.find((node) => node.floor === missionDraft.start.floor
-      && Math.hypot(node.x - missionDraft.start.x, node.z - missionDraft.start.z) <= (node.radius || 0.7))
-    : null;
-  const draftDestinationSpot = missionDraft?.destination
-    ? nodes.find((node) => node.floor === missionDraft.destination.floor
-      && Math.hypot(node.x - missionDraft.destination.x, node.z - missionDraft.destination.z) <= (node.radius || 0.7))
-    : null;
   const missionStartLabel = !missionDraft?.start
     ? '맵에서 출발지를 선택하세요'
-    : draftStartSpot?.label || `${missionDraft.start.floor} 지정 위치`;
+    : `${missionDraft.start.floor} (${missionDraft.start.x.toFixed(1)}, ${missionDraft.start.z.toFixed(1)})`;
   const missionDestinationLabel = !missionDraft?.destination
     ? '맵에서 도착지를 선택하세요'
-    : draftDestinationSpot?.label || `${missionDraft.destination.floor} 지정 위치`;
+    : `${missionDraft.destination.floor} (${missionDraft.destination.x.toFixed(1)}, ${missionDraft.destination.z.toFixed(1)})`;
 
   return (
     <main className="app">
@@ -205,6 +244,7 @@ export default function App() {
           onSelect={selectRobot}
           onMapPoint={selectMapPoint}
           missionDraft={missionDraft}
+          selectionFloor={missionDraft?.selectionFloor}
           plannedPath={plannedPath}
           layers={layers}
         />
@@ -270,7 +310,7 @@ export default function App() {
         <span className="mapdot" />
         <div>
           <b>VIRTUAL SUSEO STATION</b>
-          <small>1F CONCOURSE + B1 PLATFORMS · OBSTACLE-AWARE ROUTING</small>
+          <small>OBJ-INSPIRED MAP · 1F / B1 / B2 LIVE SIMULATION</small>
         </div>
         <span className="maptag">DIGITAL TWIN SIM</span>
       </div>
@@ -310,7 +350,7 @@ export default function App() {
           <span className="actionicon orange"><CircleAlert size={18} /></span>
           <span>
             <b>{obstacle ? '혼잡·장애물 해제' : '혼잡·장애물 주입'}</b>
-            <small>수하물 3개 + 복도 보행 밀도 증가</small>
+            <small>수하물 3개를 1F · B1 · B2에 분산 배치</small>
           </span>
           <span className={`toggle ${obstacle ? 'on' : ''}`} />
         </button>
@@ -466,13 +506,47 @@ export default function App() {
           </div>
           <b>{draftRobot?.id || '휠체어 선택'} <span>·</span> {missionStartLabel}</b>
           <small className="mission-step">{missionDestinationLabel}</small>
+          <div className="mission-map-edit">
+            <div className="mission-map-floors" aria-label="지점 선택 층">
+              {['1F', 'B1', 'B2'].map((floor) => (
+                <button
+                  key={floor}
+                  className={missionDraft.selectionFloor === floor ? 'active' : ''}
+                  onClick={() => selectMissionFloor(floor)}
+                  aria-pressed={missionDraft.selectionFloor === floor}
+                >
+                  {floor}
+                </button>
+              ))}
+            </div>
+            <div className="mission-point-edit">
+              <button
+                className={missionDraft.selecting === 'start' ? 'active' : ''}
+                onClick={() => editMissionPoint('start')}
+              >
+                출발지 다시 선택
+              </button>
+              <button
+                className={missionDraft.selecting === 'destination' ? 'active' : ''}
+                onClick={() => editMissionPoint('destination')}
+                disabled={!missionDraft.start}
+              >
+                도착지 다시 선택
+              </button>
+            </div>
+          </div>
+          <small className="mission-selection-hint">
+            {missionDraft.selecting
+              ? `${missionDraft.selectionFloor} 층에서 ${missionDraft.selecting === 'start' ? '출발지' : '도착지'}를 지도에서 선택하세요.`
+              : '맵 이동 중 오클릭을 방지하려면 위의 다시 선택 버튼을 누르세요.'}
+          </small>
           {missionDraft.start && missionDraft.destination ? (
             <>
-              <small>최단 경로 {plannedPath.length}개 경유점 · 엘리베이터 및 장애물 회피 반영</small>
-              <small>휠체어는 현재 위치에서 지정 출발지를 거쳐 도착지로 이동합니다.</small>
+              <small>좌표 기반 경로 · {plannedPath.length}개 경로점 · 장애물 회피 및 엘리베이터 연결 반영</small>
+              <small>휠체어는 현재 위치에서 지정한 출발 좌표를 거쳐 도착 좌표로 이동합니다.</small>
             </>
           ) : (
-            <small>선택한 휠체어의 출발지와 도착지를 맵에서 차례로 클릭하세요.</small>
+            <small>층을 먼저 선택한 뒤 지도에서 출발 좌표와 도착 좌표를 지정하세요.</small>
           )}
           {missionDraft.start && missionDraft.destination && (
             <div className="missionbar-routes">

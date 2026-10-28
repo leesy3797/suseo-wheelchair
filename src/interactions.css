@@ -164,6 +164,44 @@
   line-height: 1.5;
 }
 
+.mission-map-edit {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.mission-map-floors,
+.mission-point-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mission-map-edit button {
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid #2a4357;
+  border-radius: 6px;
+  color: #a9bfd0;
+  background: #102238;
+  font-size: 10px;
+}
+
+.mission-map-edit button.active {
+  border-color: #3ccbbd;
+  color: #70f1df;
+  background: #12363e;
+}
+
+.mission-map-edit button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.mission-selection-hint {
+  color: #57decb !important;
+}
+
 .missionbar-routes {
   justify-content: flex-start;
   gap: 16px;
