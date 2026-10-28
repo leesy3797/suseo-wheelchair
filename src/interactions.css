@@ -1,0 +1,361 @@
+.draghandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 16px;
+  color: #63839c;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.draghandle:hover {
+  color: #37dfcb;
+}
+
+.draghandle:active {
+  cursor: grabbing;
+}
+
+.panel-resize {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 6;
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  color: #63839c;
+  cursor: nwse-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.panel-resize:hover {
+  color: #37dfcb;
+}
+
+.topbar,
+.kpis,
+.maplabel,
+.leftpanel,
+.rightpanel,
+.bottomleft,
+.bottomright,
+.footer,
+.floor-switch {
+  overflow: auto;
+}
+
+.leftpanel,
+.rightpanel {
+  max-height: calc(100vh - 460px);
+}
+
+.leftpanel {
+  min-height: 220px;
+}
+
+.rightpanel {
+  min-height: 260px;
+}
+
+.kpis {
+  align-items: stretch;
+}
+
+.kpis .kpi {
+  flex: 1 0 125px;
+}
+
+.add-robot {
+  margin-top: 6px;
+  border-top: 1px solid rgba(117, 157, 194, 0.14);
+  border-radius: 0;
+}
+
+.floor-switch {
+  position: absolute;
+  z-index: 3;
+  top: 235px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 8px 12px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(117, 157, 194, 0.2);
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(13, 27, 44, 0.94), rgba(7, 18, 31, 0.88));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+.floor-caption {
+  color: #7291a9;
+  font: 9px 'DM Mono', monospace;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+
+.floor-switch button {
+  padding: 7px 10px;
+  border: 1px solid #2a4357;
+  border-radius: 7px;
+  background: #102238;
+  color: #9ab3c7;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.floor-switch button.active {
+  border-color: #1c7775;
+  background: #123a42;
+  color: #54e6d3;
+}
+
+.kpidrag {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  z-index: 1;
+}
+
+.missionbar {
+  position: absolute;
+  z-index: 4;
+  top: 180px;
+  left: 50%;
+  width: min(460px, calc(100vw - 32px));
+  padding: 14px 16px;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.missionbar-head,
+.missionbar-actions,
+.missionbar-routes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.missionbar-head {
+  margin-bottom: 8px;
+}
+
+.missionbar > b {
+  display: block;
+  font-size: 13px;
+}
+
+.missionbar > b span {
+  color: #63839c;
+  margin: 0 4px;
+}
+
+.missionbar > small {
+  display: block;
+  margin-top: 6px;
+  color: #9ab3c7;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.missionbar-routes {
+  justify-content: flex-start;
+  gap: 16px;
+  margin-top: 10px;
+  color: #a7bdce;
+  font-size: 9px;
+}
+
+.missionbar-routes span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.route-swatch {
+  display: inline-block;
+  width: 17px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.route-swatch.planned {
+  background: #45e0cf;
+}
+
+.route-swatch.realtime {
+  background: repeating-linear-gradient(90deg, #ffbd69 0 4px, transparent 4px 7px);
+}
+
+.missionbar-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.missionbar-actions .secondarybtn,
+.missionbar-actions .primarybtn {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 10px;
+}
+
+.missionbar-actions .primarybtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.mission-cancel {
+  border: 0;
+  background: transparent;
+  color: #91a9bc;
+  font-size: 21px;
+  line-height: 1;
+}
+
+@media(max-width:760px) {
+  .missionbar {
+    top: 164px;
+  }
+}
+
+:root {
+  font-size: 16px;
+}
+
+.app {
+  font-size: 16px;
+}
+
+.topbar,
+.kpis,
+.maplabel,
+.leftpanel,
+.rightpanel,
+.bottomleft,
+.bottomright,
+.footer,
+.missionbar {
+  resize: none;
+  cursor: default;
+}
+
+.draghandle,
+.panel-resize {
+  display: none !important;
+}
+
+.topbar .live,
+.topbar .connection,
+.operator b,
+.operator small,
+.maplabel small,
+.maptag,
+.eyebrow,
+.sectiontitle,
+.eventcount,
+.layerlive,
+.bottomtitle,
+.mapcoords {
+  font-size: 13px;
+}
+
+.kpi small,
+.kpi span,
+.robot-info > small,
+.actionrow b,
+.switchrow b,
+.batteryline small,
+.robot-tag,
+.telemetrygrid small,
+.telemetrygrid b,
+.routehead,
+.routefoot,
+.diagnostics,
+.layerrow,
+.playcontrols button,
+.footer,
+.missionbar > small,
+.missionbar > b {
+  font-size: 14px;
+}
+
+.kpi strong {
+  font-size: 28px;
+}
+
+.maplabel b,
+.panelhead h2 {
+  font-size: 17px;
+}
+
+.status,
+.kpi strong em,
+.actionrow small,
+.switchrow small,
+.batteryhero small,
+.batteryline small,
+.routepath,
+.event small,
+.layerrow > span,
+.missionbar-actions button {
+  font-size: 12px;
+}
+
+.missionbar {
+  width: min(520px, calc(100vw - 32px));
+  border-color: rgba(69, 224, 207, 0.45);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), 0 0 28px rgba(38, 228, 208, 0.1);
+  pointer-events: none;
+}
+
+.missionbar button {
+  pointer-events: auto;
+}
+
+.mission-step {
+  color: #56e6d3 !important;
+  font-weight: 700;
+}
+
+.direct-route {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0;
+  color: #b7cede;
+  font-size: 13px;
+}
+
+.direct-route i {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, #40e2cc, #ffc46d);
+}
+
+.primarybtn:not(:disabled) {
+  border-color: #39d9c7;
+  background: linear-gradient(135deg, #176b69, #145274);
+  color: #eafffb;
+}
+
+.kpi:nth-child(1),
+.kpi:nth-child(3) {
+  border-color: rgba(46, 226, 204, 0.32);
+}
+
+.floor-switch {
+  display: none;
+}
+
+@media(max-width:760px) {
+  .missionbar {
+    top: 150px;
+  }
+}
